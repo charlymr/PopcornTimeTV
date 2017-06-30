@@ -9,6 +9,18 @@ open class TMDBManager: NetworkManager {
     /// Creates new instance of TMDBManager class
     open static let shared = TMDBManager()
     
+    
+    let managerCache: SessionManager = {
+        
+        var configuration = URLSessionConfiguration.default
+        configuration.httpCookieAcceptPolicy = .always
+        configuration.httpShouldSetCookies = true
+        configuration.urlCache = TMDBURLCache.tmbd
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        
+        return Alamofire.SessionManager(configuration: configuration)
+    }()
+    
     /**
      Load movie posters from TMDB. Either a tmdb id or an imdb id must be passed in.
      
@@ -30,6 +42,7 @@ open class TMDBManager: NetworkManager {
         }
         
         self.manager.request(TMDB.base + "/" + type.rawValue + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
+        self.managerCache.request(TMDB.base + "/" + type.rawValue + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
             
@@ -62,6 +75,7 @@ open class TMDBManager: NetworkManager {
         }
         
         self.manager.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
+        self.managerCache.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
             
@@ -95,6 +109,7 @@ open class TMDBManager: NetworkManager {
         }
         
         self.manager.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.episode + "/\(episode)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
+        self.managerCache.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.episode + "/\(episode)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
             
@@ -126,6 +141,7 @@ open class TMDBManager: NetworkManager {
         }
         
         self.manager.request(TMDB.base + TMDB.person + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
+        self.managerCache.request(TMDB.base + TMDB.person + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
             
@@ -157,4 +173,45 @@ open class TMDBManager: NetworkManager {
         }
         
     }
+    
+}
+
+
+public class TMDBURLCache: PCTURLCache {
+    
+    /// The default instance of `PCTURLCache` initialized with default values.
+    public static let tmbd = TMDBURLCache(
+        memoryCapacity: 20 * 1024 * 1024, // 20 MB
+        diskCapacity: 150 * 1024 * 1024,  // 150 MB
+        diskPath: nil
+    )
+    
+    override public func storeCachedResponse(_ cachedResponse: CachedURLResponse, for request: URLRequest) {
+        
+        // Fine grain image cache control
+        if  let response = cachedResponse.response as? HTTPURLResponse,
+            let url = response.url {
+            
+            var headers = response.allHeaderFields as! [String:String]
+            
+            headers["Cache-Control"] = "max-age=\(Int((86400 * 365))),public"
+            headers["Expires"]       = "\(Date() + (86400 * 365))"
+            
+            let updatedResponse = HTTPURLResponse(url:          url,
+                                                  statusCode:   response.statusCode,
+                                                  httpVersion:  nil,
+                                                  headerFields: headers)
+            
+            let cached = CachedURLResponse(response: updatedResponse!,
+                                           data: cachedResponse.data,
+                                           userInfo: nil,
+                                           storagePolicy: .allowed)
+            
+            super.storeCachedResponse(cached, for: request)
+            return
+        }
+        
+        super.storeCachedResponse(cachedResponse, for: request)
+    }
+    
 }

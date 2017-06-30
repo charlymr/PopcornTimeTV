@@ -1,5 +1,6 @@
 import Foundation
 import Alamofire
+import AlamofireImage
 
 public struct Trakt {
     static let apiKey = "d3b0811a35719a67187cba2476335b2144d31e5840d02f687fbf84e7eaadc811"
@@ -99,12 +100,15 @@ public struct Fanart {
 }
 
 open class NetworkManager: NSObject {
+    
     internal let manager: SessionManager = {
+        
         var configuration = URLSessionConfiguration.default
         configuration.httpCookieAcceptPolicy = .always
         configuration.httpShouldSetCookies = true
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .useProtocolCachePolicy
+        configuration.urlCache = PCTURLCache.default
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        
         return Alamofire.SessionManager(configuration: configuration)
     }()
     
@@ -153,4 +157,88 @@ open class NetworkManager: NSObject {
             return rawValue.localized
         }
     }
+}
+
+public extension ImageDownloader {
+    
+    public static let popcornTime: ImageDownloader = {
+        PCTURLCache.default.customImageCaching = 86400
+        return PCTURLCache.default.imageDownloader
+    }()
+    
+}
+
+public class PCTURLCache: URLCache {
+    
+    /// The default instance of `PCTURLCache` initialized with default values.
+    public static let `default` = PCTURLCache(
+        memoryCapacity: 20 * 1024 * 1024, // 20 MB
+        diskCapacity: 150 * 1024 * 1024,  // 150 MB
+        diskPath: nil
+    )
+    
+    //MARK: ImageDownloader
+    
+    public lazy var imageDownloader: ImageDownloader =  {
+        
+        let cachePolicy: NSURLRequest.CachePolicy = .returnCacheDataElseLoad
+        let configuration = URLSessionConfiguration.default
+        configuration.httpAdditionalHeaders     = SessionManager.defaultHTTPHeaders
+        configuration.httpShouldSetCookies      = true
+        configuration.httpShouldUsePipelining   = false
+        
+        configuration.requestCachePolicy        = .returnCacheDataElseLoad
+        configuration.allowsCellularAccess      = true
+        configuration.timeoutIntervalForRequest = 60
+        
+        configuration.urlCache                  = self
+        
+        let requestCache: ImageRequestCache = AutoPurgingImageCache()
+        
+        let imageDowloader = ImageDownloader(configuration: configuration,
+                                             downloadPrioritization: .fifo,
+                                             maximumActiveDownloads: 4,
+                                             imageCache:requestCache )
+        
+        return imageDowloader
+        
+    }()
+    
+    //MARK: Let's see what happen here and add some custom caching by tricking the response
+    
+    public var customImageCaching: TimeInterval?
+    
+    override public func storeCachedResponse(_ cachedResponse: CachedURLResponse, for request: URLRequest) {
+        
+        // Fine grain image cache control
+        if  let response = cachedResponse.response as? HTTPURLResponse,
+            let url = response.url,
+            let mimeType = response.mimeType,
+            mimeType.substring(to:  mimeType.index( mimeType.startIndex, offsetBy: 5) ) == "image",
+            let imageCaching = customImageCaching
+            
+        {
+            
+            var headers = response.allHeaderFields as! [String:String]
+            
+            headers["Cache-Control"] = "max-age=\(Int(imageCaching)),public"
+            headers["Expires"]       = "\(Date() + imageCaching)"
+            
+            let updatedResponse = HTTPURLResponse(url:          url,
+                                                  statusCode:   response.statusCode,
+                                                  httpVersion:  nil,
+                                                  headerFields: headers)
+            
+            let cached = CachedURLResponse(response: updatedResponse!,
+                                           data: cachedResponse.data,
+                                           userInfo: nil,
+                                           storagePolicy: .allowed)
+            
+            super.storeCachedResponse(cached, for: request)
+            return
+        }
+        
+        super.storeCachedResponse(cachedResponse, for: request)
+    }
+    
 }

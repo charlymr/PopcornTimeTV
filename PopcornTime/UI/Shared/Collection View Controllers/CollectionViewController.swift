@@ -216,7 +216,7 @@ class CollectionViewController: ResponsiveCollectionViewController, UICollection
                 let url = URL(string: image),
                 let request = try? URLRequest(url: url, method: .get) {
                 _cell.originalImage = UIImage(named: "Other Placeholder")
-                ImageDownloader.default.download(request) { (response) in
+                ImageDownloader.popcornTime.download(request) { (response) in
                     _cell.originalImage = response.result.value
                 }
             } else {

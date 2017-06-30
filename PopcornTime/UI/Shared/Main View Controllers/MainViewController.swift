@@ -101,47 +101,53 @@ class MainViewController: UIViewController, CollectionViewControllerDelegate {
                 navigationController?.navigationBar.isBackgroundHidden = true
             #endif
             
-            vc.loadMedia(id: media.id) { (media, error) in
-                guard let navigationController = segue.destination.navigationController,
-                    navigationController.visibleViewController === segue.destination // Make sure we're still loading and the user hasn't dismissed the view.
-                    else { return }
+            
+            DispatchQueue.global(qos: .background).async { [weak self]
+                () -> Void in
                 
-                
-                let transition = CATransition()
-                transition.duration = 0.5
-                transition.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-                transition.type = kCATransitionFade
-                navigationController.view.layer.add(transition, forKey: nil)
-                
-                defer {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + transition.duration) {
-                        var viewControllers = navigationController.viewControllers
-                        if let index = viewControllers.index(where: {$0 === segue.destination}) {
-                            viewControllers.remove(at: index)
-                            navigationController.setViewControllers(viewControllers, animated: false)
-                        }
-                        
-                        if let media = media, segue.shouldAutoPlay {
-                            AppDelegate.shared.chooseQuality(nil, media: media) { torrent in
-                                AppDelegate.shared.play(media, torrent: torrent)
+                vc.loadMedia(id: media.id) { (media, error) in
+                    guard let navigationController = segue.destination.navigationController,
+                        navigationController.visibleViewController === segue.destination // Make sure we're still loading and the user hasn't dismissed the view.
+                        else { return }
+                    
+                    
+                    let transition = CATransition()
+                    transition.duration = 0.5
+                    transition.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                    transition.type = kCATransitionFade
+                    navigationController.view.layer.add(transition, forKey: nil)
+                    
+                    defer {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + transition.duration) {
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.index(where: {$0 === segue.destination}) {
+                                viewControllers.remove(at: index)
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                            }
+                            
+                            if let media = media, segue.shouldAutoPlay {
+                                AppDelegate.shared.chooseQuality(nil, media: media) { torrent in
+                                    AppDelegate.shared.play(media, torrent: torrent)
+                                }
                             }
                         }
                     }
-                }
-                
-                if let error = error {
-                    let vc = UIViewController()
-                    let view: ErrorBackgroundView? = .fromNib()
                     
-                    view?.setUpView(error: error)
-                    vc.view = view
-                    
-                    navigationController.pushViewController(vc, animated: false)
-                } else if let currentItem = media {
-                    vc.currentItem = currentItem
-                    navigationController.pushViewController(vc, animated: false)
+                    if let error = error {
+                        let vc = UIViewController()
+                        let view: ErrorBackgroundView? = .fromNib()
+                        
+                        view?.setUpView(error: error)
+                        vc.view = view
+                        
+                        navigationController.pushViewController(vc, animated: false)
+                    } else if let currentItem = media {
+                        vc.currentItem = currentItem
+                        navigationController.pushViewController(vc, animated: false)
+                    }
                 }
             }
+
         } else if segue.identifier == "showPerson",
             let vc = segue.destination as? PersonViewController,
             let person: Person = sender as? Crew ?? sender as? Actor {

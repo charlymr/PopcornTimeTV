@@ -26,7 +26,7 @@ target 'PopcornTimeiOS' do
 end
 
 target 'PopcornTimetvOS' do
-    platform :tvos, '10.0'
+    platform :tvos, '10.2'
     pods
     pod 'TvOSMoreButton', :git => 'https://github.com/cgoldsby/TvOSMoreButton'
     pod 'TVVLCKit', '~> 2.1.0'
@@ -34,12 +34,13 @@ target 'PopcornTimetvOS' do
 end
 
 target 'TopShelf' do
-    platform :tvos, '10.0'
+    platform :tvos, '10.2'
     pod 'ObjectMapper', '~> 2.2.7'
 end
 
 def kitPods
     pod 'Alamofire', '~> 4.4.0'
+    pod 'AlamofireImage', '~> 3.2.0'
     pod 'ObjectMapper', '~> 2.2.7'
     pod 'AlamofireXMLRPC', '~> 2.1.0'
     pod 'SwiftyJSON', '~> 3.1.4'
@@ -47,7 +48,7 @@ def kitPods
 end
 
 target 'PopcornKit tvOS' do
-    platform :tvos, '10.0'
+    platform :tvos, '10.2'
     kitPods
 end
 
