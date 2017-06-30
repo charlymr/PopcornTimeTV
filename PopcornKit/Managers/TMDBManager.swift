@@ -41,7 +41,6 @@ open class TMDBManager: NetworkManager {
             return
         }
         
-        self.manager.request(TMDB.base + "/" + type.rawValue + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
         self.managerCache.request(TMDB.base + "/" + type.rawValue + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
@@ -74,7 +73,6 @@ open class TMDBManager: NetworkManager {
             return
         }
         
-        self.manager.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
         self.managerCache.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
@@ -108,7 +106,6 @@ open class TMDBManager: NetworkManager {
             return
         }
         
-        self.manager.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.episode + "/\(episode)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
         self.managerCache.request(TMDB.base + TMDB.tv + "/\(id)" + TMDB.season + "/\(season)" + TMDB.episode + "/\(episode)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
@@ -140,7 +137,6 @@ open class TMDBManager: NetworkManager {
             return
         }
         
-        self.manager.request(TMDB.base + TMDB.person + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
         self.managerCache.request(TMDB.base + TMDB.person + "/\(id)" + TMDB.images, parameters: TMDB.defaultHeaders).validate().responseJSON { (response) in
             guard let value = response.result.value else { completion(id, nil, response.result.error as NSError?); return }
             let responseDict = JSON(value)
@@ -211,7 +207,7 @@ public class TMDBURLCache: PCTURLCache {
             return
         }
         
-        super.storeCachedResponse(cachedResponse, for: request)
     }
     
 }
+
